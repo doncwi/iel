@@ -263,54 +263,89 @@ def cmd_embed(args):
 # Search Command
 # -------------------------------------------
 
-
 def cmd_search(args):
+    # Define a function 'cmd_search' that performs top-K image similarity search based on a query set
+
     start = time.time()
+    # Record the start time to measure how long the search takes
 
     """Search top-K similar images for query images."""
+    # Docstring explaining that the function searches for the top-K similar images for given query images
+
     index_dir = args.index
+    # Get the directory of the precomputed index from command-line arguments
+
     query_dir = args.query_dir
+    # Get the directory containing query images from command-line arguments
+
     k = args.k
+    # Get the number of top similar images to return for each query
+
     as_json = args.json
+    # Determine whether to output results in JSON format based on command-line argument
 
     # Load index
     print(f"📂 Loading index from {index_dir} ...")
+    # Print a message indicating the index is being loaded
+
     paths, embeddings = load_index(index_dir)
+    # Load image paths and embeddings from the index directory using the previously defined 'load_index' function
 
     query_paths = list_images(query_dir)
+    # Get a sorted list of query image file paths in 'query_dir'
+
     if not query_paths:
         print(f"❌ No query images found in {query_dir}")
         return
+        # If no query images are found, print an error message and exit the function
 
     embedder = ImageEmbedding(model_name="Qdrant/clip-ViT-B-32-vision")
+    # Initialize the image embedding model for generating embeddings of query images
 
     results = []
+    # Initialize an empty list to store the search results
 
-    print(
-        f"🔍 Searching top-{k} similar images for {len(query_paths)} queries ...")
+    print(f"🔍 Searching top-{k} similar images for {len(query_paths)} queries ...")
+    # Print a message indicating how many query images will be processed
+
     for qpath in tqdm(query_paths):
+        # Loop through each query image with a progress bar from tqdm
+
         qimg = Image.open(qpath).convert("RGB")
+        # Open the query image and convert it to RGB mode
+
         qemb = next(embedder.embed([qimg]))
+        # Generate the embedding for the query image
+
         sims = cosine_similarity([qemb], embeddings)[0]
+        # Compute cosine similarity between the query embedding and all index embeddings
+
         top_idx = np.argsort(sims)[::-1][:k]
-        top_results = [
-            {"path": paths[i], "score": float(sims[i])} for i in top_idx
-        ]
-        results.append({
-            "query": qpath,
-            "results": top_results
-        })
+        # Get the indices of the top-K most similar images (sorted in descending order of similarity)
+
+        top_results = [{"path": paths[i], "score": float(sims[i])} for i in top_idx]
+        # Create a list of dictionaries for the top-K results, each containing the image path and similarity score
+
+        results.append({"query": qpath, "results": top_results})
+        # Append a dictionary containing the query path and its top-K results to the 'results' list
 
     if as_json:
         print(json.dumps(results, indent=2))
+        # If JSON output is requested, print the results formatted as JSON
     else:
         for r in results:
             print(f"\nQuery: {r['query']}")
+            # Print the query image path
+
             for res in r["results"]:
                 print(f"  {res['path']}  ({res['score']:.4f})")
-    end = time.time()
-    print(f"Search took {end - start:.4f} seconds")
+                # Print each top-K result with its path and similarity score
 
+    end = time.time()
+    # Record the end time of the search
+
+    print(f"Search took {end - start:.4f} seconds")
+    # Print how long the search process took
 
 # -------------------------------------------
 # Analyze Command
