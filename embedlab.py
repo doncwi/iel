@@ -350,61 +350,115 @@ def cmd_search(args):
 # -------------------------------------------
 # Analyze Command
 # -------------------------------------------
-
 def cmd_analyze(args):
+    # Define a function 'cmd_analyze' that finds near-duplicate images and most isolated anomalies
+
     """Find near-duplicate image groups and most isolated anomalies."""
+    # Docstring describing the purpose of the function
+
     index_dir = args.index
+    # Get the directory of the precomputed embeddings index from command-line arguments
+
     dup_threshold = args.dup_threshold
+    # Get the cosine similarity threshold above which images are considered duplicates
+
     anomaly_top = args.anomaly_top
+    # Get the number of top anomalies to return
+
     as_json = args.json
+    # Determine whether to output results in JSON format
 
     print(f"📂 Loading index from {index_dir} ...")
+    # Print a message indicating the index is being loaded
+
     paths, embeddings = load_index(index_dir)
+    # Load image paths and embeddings from the index using the 'load_index' function
+
     n = len(paths)
+    # Store the total number of images
+
     print(f"🧩 Loaded {n} embeddings")
+    # Print how many embeddings were loaded
 
     # --- Compute cosine similarity matrix (symmetric) ---
     print("📈 Computing cosine similarities...")
+    # Print a message indicating that cosine similarity computation has started
+
     sims = cosine_similarity(embeddings)
+    # Compute the full pairwise cosine similarity matrix of embeddings
+
     np.fill_diagonal(sims, 1.0)
+    # Set the diagonal to 1.0 because each image is perfectly similar to itself
 
     # --- Find duplicate groups ---
     visited = set()
+    # Initialize a set to track indices of images already assigned to a duplicate group
+
     duplicate_groups = []
+    # Initialize a list to store groups of duplicate images
+
     for i in range(n):
+        # Iterate over all images
+
         if i in visited:
             continue
+            # Skip images that are already part of a duplicate group
+
         dup_indices = set(np.where(sims[i] >= dup_threshold)[0])
+        # Find indices of images whose similarity with image i exceeds the duplicate threshold
+
         dup_indices.discard(i)
+        # Remove the current image index from its own duplicate set
+
         if dup_indices:
             group = [paths[i]] + [paths[j] for j in dup_indices]
+            # Create a duplicate group including the current image and its similar images
+
             duplicate_groups.append(sorted(group))
+            # Add the group (sorted alphabetically by path) to the list of duplicate groups
+
             visited.update(dup_indices)
             visited.add(i)
+            # Mark all images in this group as visited to avoid reprocessing
 
     # --- Find anomalies ---
     print("🔍 Detecting anomalies...")
+    # Print a message indicating that anomaly detection is starting
+
     k = min(10, n - 1)  # K for KNN density
+    # Set K for k-nearest neighbors; use at most 10 or n-1 if there are fewer images
+
     dists = 1 - sims
+    # Convert similarities to distances (distance = 1 - similarity)
+
     knn_mean_dist = np.mean(np.sort(dists, axis=1)[:, 1:k+1], axis=1)
+    # For each image, compute the mean distance to its k nearest neighbors (excluding itself)
+
     top_anomaly_idx = np.argsort(knn_mean_dist)[::-1][:anomaly_top]
+    # Sort images by descending mean distance and pick top 'anomaly_top' indices as anomalies
+
     anomalies = [paths[i] for i in top_anomaly_idx]
+    # Get the paths of the top anomaly images
 
     result = {
         "duplicate_groups": duplicate_groups,
         "anomalies": anomalies
     }
+    # Create a dictionary containing both duplicate groups and anomalies
 
     if as_json:
         print(json.dumps(result, indent=2))
+        # If JSON output is requested, print the results in formatted JSON
     else:
         print("\n🧍 Duplicate groups:")
         for g in duplicate_groups:
             print("  -", ", ".join(g))
+            # Print each duplicate group as a comma-separated list
+
         print("\n🚨 Anomalies:")
         for a in anomalies:
             print("  -", a)
-
+            # Print each anomaly image path
 
 # -------------------------------------------
 # Main CLI Entrypoint
