@@ -39,6 +39,11 @@ python embedlab.py analyze --index ./index --dup-threshold 0.92 --anomaly-top 8 
 ```
 
 
+NOTE:
+
+- Given the time constraints, I won’t be able to create comprehensive unit tests or thoroughly test the core logic. To prioritize delivering a functional MVP, I’ve decided to focus on the core implementation first.
+
+
 References/citations:
 
 https://github.com/qdrant/fastembed
