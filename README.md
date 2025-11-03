@@ -1,6 +1,17 @@
 # iel
 image embedding lab
 
+BACKBONE:
+To build this MVP fastembed was used and heavily relied on with the "Qdrant/clip-ViT-B-32-vision" model being used for embedings
+
+ASSUMPTIONS:
+- images used in training dont have cluttered backgrounds
+- images used in training dont have low entropy
+- images are not corrupted
+- images are not blank
+- speed was a factor
+- download/setup times should not take several GB or > 15 minutes
+
 HOW TO RUN:
 
 1. Install libs using
