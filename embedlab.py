@@ -305,7 +305,8 @@ def cmd_search(args):
     results = []
     # Initialize an empty list to store the search results
 
-    print(f"🔍 Searching top-{k} similar images for {len(query_paths)} queries ...")
+    print(
+        f"🔍 Searching top-{k} similar images for {len(query_paths)} queries ...")
     # Print a message indicating how many query images will be processed
 
     for qpath in tqdm(query_paths):
@@ -323,7 +324,8 @@ def cmd_search(args):
         top_idx = np.argsort(sims)[::-1][:k]
         # Get the indices of the top-K most similar images (sorted in descending order of similarity)
 
-        top_results = [{"path": paths[i], "score": float(sims[i])} for i in top_idx]
+        top_results = [
+            {"path": paths[i], "score": float(sims[i])} for i in top_idx]
         # Create a list of dictionaries for the top-K results, each containing the image path and similarity score
 
         results.append({"query": qpath, "results": top_results})
@@ -350,9 +352,10 @@ def cmd_search(args):
 # -------------------------------------------
 # Analyze Command
 # -------------------------------------------
+
+
 def cmd_analyze(args):
     # Define a function 'cmd_analyze' that finds near-duplicate images and most isolated anomalies
-
     """Find near-duplicate image groups and most isolated anomalies."""
     # Docstring describing the purpose of the function
 
