@@ -27,66 +27,138 @@ import math
 
 
 def list_images(directory):
+    # Define a function named 'list_images' that takes one argument 'directory'
     """Return list of valid image file paths in directory."""
+    # Docstring explaining that the function returns a list of image file paths in the given directory
+
     exts = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
+    # Define a tuple 'exts' containing file extensions that are considered valid image formats
+
     return sorted([
+        # Return a sorted list of file paths (alphabetically by default)
+
         os.path.join(directory, f)
+        # For each file 'f', join it with the directory path to get the full file path
+
         for f in os.listdir(directory)
+        # Iterate over every file 'f' in the list of files returned by os.listdir(directory)
+
         if f.lower().endswith(exts)
+        # Only include files whose names (converted to lowercase) end with one of the valid image extensions
     ])
 
 
 def save_index(out_dir, paths, embeddings):
+    # Define a function 'save_index' that takes three arguments:
+    # 'out_dir' (output directory), 'paths' (list of file paths), and 'embeddings' (array of embeddings)
     """Save embeddings and corresponding paths."""
+    # Docstring explaining that this function saves embeddings and their corresponding file paths
+
     os.makedirs(out_dir, exist_ok=True)
+    # Create the output directory 'out_dir' if it does not exist; 'exist_ok=True' prevents error if it already exists
+
     np.save(os.path.join(out_dir, "embeddings.npy"), embeddings)
+    # Save the 'embeddings' array as a .npy file named "embeddings.npy" inside 'out_dir'
+
     with open(os.path.join(out_dir, "paths.json"), "w") as f:
+        # Open a file named "paths.json" inside 'out_dir' in write mode and assign it to variable 'f'
+
         json.dump(paths, f)
+        # Write the 'paths' list to the file 'f' in JSON format
+
     print(f"✅ Saved index to {out_dir}/")
+    # Print a confirmation message that the index has been saved, including the output directory path
 
 
 def load_index(index_dir):
+    # Define a function 'load_index' that takes one argument 'index_dir', the directory where the index is stored
     """Load embeddings and paths from index directory."""
+    # Docstring explaining that this function loads embeddings and their corresponding file paths
+
     emb_path = os.path.join(index_dir, "embeddings.npy")
+    # Construct the full path to the embeddings file "embeddings.npy" inside 'index_dir'
+
     path_path = os.path.join(index_dir, "paths.json")
+    # Construct the full path to the paths file "paths.json" inside 'index_dir'
+
     if not os.path.exists(emb_path) or not os.path.exists(path_path):
+        # Check if either the embeddings file or the paths file does not exist
+
         raise FileNotFoundError("Index not found or incomplete.")
+        # If any file is missing, raise a FileNotFoundError with a descriptive message
+
     embeddings = np.load(emb_path)
+    # Load the embeddings array from the .npy file using NumPy
+
     with open(path_path, "r") as f:
+        # Open the paths file in read mode and assign the file object to 'f'
+
         paths = json.load(f)
+        # Load the list of paths from the JSON file
+
     return paths, embeddings
+    # Return the loaded paths and embeddings as a tuple
 
 
 def image_entropy(img):
+    # Define a function 'image_entropy' that takes a PIL Image object 'img' as input
     """Compute Shannon entropy of a PIL image (0 = uniform, ~8 = rich)."""
+    # Docstring explaining that the function computes the Shannon entropy of the image.
+    # A low entropy (~0) indicates a uniform image, high (~8) indicates a complex image
+
     hist = img.convert("L").histogram()
+    # Convert the image to grayscale ("L" mode) and compute its histogram (pixel intensity counts)
+
     hist_size = float(sum(hist))
+    # Calculate the total number of pixels in the image by summing all histogram values
+
     hist = [h / hist_size for h in hist if h > 0]
+    # Normalize the histogram to get probabilities (divide each count by total pixels)
+    # Skip zero counts to avoid log2(0) issues
+
     return -sum(p * math.log2(p) for p in hist)
+    # Compute and return the Shannon entropy: sum of -p*log2(p) for each probability p
 
 
 def is_image_valid(path, entropy_threshold=1.5, std_threshold=3):
+    # Define a function 'is_image_valid' that checks if an image at 'path' is valid.
+    # Takes optional thresholds for entropy and standard deviation of pixel intensity.
     """
     Check for corruption, blank, or low-entropy images.
     Returns (is_valid, reason)
     """
+    # Docstring explaining that the function returns a tuple:
+    # True/False for validity and a string describing the reason if invalid.
+
     try:
         img = Image.open(path).convert("RGB")
+        # Attempt to open the image at 'path' and convert it to RGB mode.
     except Exception as e:
         return False, f"corrupted ({e})"
+        # If opening fails, return False and a reason string indicating corruption.
 
     stat = ImageStat.Stat(img)
+    # Compute statistics of the image using PIL's ImageStat module.
+
     mean = sum(stat.mean) / 3
+    # Calculate the average pixel intensity across R, G, B channels.
+
     stddev = sum(stat.stddev) / 3
+    # Calculate the average standard deviation across R, G, B channels to measure contrast.
 
     if stddev < std_threshold:
         return False, f"low contrast (std={stddev:.2f})"
+        # If the standard deviation is below the threshold, consider image low-contrast and invalid.
 
     ent = image_entropy(img)
+    # Compute the Shannon entropy of the image using the previously defined 'image_entropy' function.
+
     if ent < entropy_threshold:
         return False, f"low entropy (H={ent:.2f})"
+        # If the entropy is below the threshold, consider the image low-information and invalid.
 
     return True, None
+    # If all checks pass, return True indicating the image is valid, and None for reason.
 
 # -------------------------------------------
 # Embedding Command
