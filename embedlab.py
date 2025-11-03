@@ -166,51 +166,97 @@ def is_image_valid(path, entropy_threshold=1.5, std_threshold=3):
 
 
 def cmd_embed(args):
+    # Define a function 'cmd_embed' that takes a namespace 'args' containing command-line arguments
+
     start = time.time()
+    # Record the current time to measure how long embedding takes
+
     image_dir = args.images_dir
+    # Get the directory containing images from the arguments
+
     out_dir = args.out
+    # Get the output directory from the arguments
 
     paths = list_images(image_dir)
+    # Get a sorted list of image file paths in 'image_dir' using the previously defined 'list_images' function
+
     if not paths:
         print(f"❌ No images found in {image_dir}")
         return
+        # If no images are found, print an error message and exit the function
 
     embedder = ImageEmbedding(model_name="Qdrant/clip-ViT-B-32-vision")
+    # Initialize an image embedding model (CLIP-based) for generating embeddings
+
     embeddings = []
+    # Create an empty list to store embeddings
+
     valid_paths = []
+    # Create an empty list to store paths of valid images
 
     print(f"🧠 Embedding {len(paths)} images from {image_dir} ...")
+    # Print a message showing how many images will be embedded
+
     skipped = []
+    # Initialize a list to track images that are skipped due to validation failure
 
     count = 0
+    # Initialize a counter to track how many images were successfully embedded
+
     for path in tqdm(paths):
+        # Loop through all image paths with a progress bar from tqdm
+
         valid, reason = is_image_valid(path)
+        # Check if the current image is valid using the 'is_image_valid' function
+
         if not valid:
             skipped.append((path, reason))
             continue
+            # If the image is invalid, add it to the skipped list and skip further processing
 
         image = Image.open(path).convert("RGB")
+        # Open the valid image and convert it to RGB mode
+
         emb = next(embedder.embed([image]))
+        # Generate the embedding for the image using the embedder
+
         embeddings.append(emb)
+        # Add the generated embedding to the embeddings list
+
         valid_paths.append(path)
+        # Add the path of the valid image to the valid_paths list
+
         count = count + 1
+        # Increment the counter of successfully embedded images
 
     if not embeddings:
         print("❌ No valid images to embed.")
         return
+        # If no embeddings were generated, print a message and exit the function
 
     embeddings = np.vstack(embeddings)
+    # Stack all individual embeddings into a single NumPy array
+
     save_index(out_dir, valid_paths, embeddings)
+    # Save the embeddings and corresponding valid paths to the output directory using 'save_index'
 
     if skipped:
         print(f"⚠️ Skipped {len(skipped)} bad images:")
+        # If there were skipped images, print a warning showing how many were skipped
+
         for p, r in skipped[:10]:
             print(f"  - {p}: {r}")
+            # Print the first 10 skipped images with their reasons
+
         if len(skipped) > 10:
             print(f"  ... and {len(skipped)-10} more")
+            # If more than 10 images were skipped, indicate how many more were skipped
 
     end = time.time()
+    # Record the time at the end of embedding
+
     print(f"Embeds took {end - start:.4f} seconds to go over {count} files")
+    # Print how long embedding took and how many images were processed successfully
 
 
 # -------------------------------------------
